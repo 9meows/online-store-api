@@ -1,0 +1,49 @@
+# Environments
+.venv/
+env/
+venv/
+ENV/
+.env
+.env.*
+!/.env.example    
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*$py.class
+*.so
+*.egg-info/
+build/
+dist/
+*.egg
+*.manifest
+*.spec
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# temp
+.history/
+cython_debug/
+
+# Macos
+.DS_Store
+
+# Windows
+Thumbs.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Logs
+*.log
+
+#Database dumps
+*.sql
+*.dump
+*.backup
+*.sqlite
+*.db
