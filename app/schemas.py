@@ -65,7 +65,7 @@ class UserCreate(BaseModel):
     """
     email: Annotated[EmailStr, Field(description="Email пользователя")]
     password: Annotated[str, Field(min_length=8, description="Пароль (минимум 8 символов)")]
-    role: Annotated[str, Field(default="buyer", pattern="^(buyer|seller)$", description="Роль: 'buyer' или 'seller'")]
+    role: Annotated[str, Field(default="buyer", pattern="^(buyer|seller)$", description="Роль: 'buyer', 'seller'")]
 
 class User(BaseModel):
     """
@@ -79,6 +79,10 @@ class User(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class ReviewCreate(BaseModel):
+    """
+    Модель для создания и обновления отзыва.
+    Используется в POST и PUT запросах.
+    """
     product_id: Annotated[int, Field("ID продукта, к которому относится к отзыв")]
     comment: Annotated[str, Field(description="Комментарий пользователя")]
     grade: Annotated[int, Field(description="Оценка пользователя", ge=1, le=5)]
@@ -86,7 +90,7 @@ class ReviewCreate(BaseModel):
 
 class Review(BaseModel):
     """
-    Модель для ответа с данными пользователя.
+    Модель для ответа с данными отзыва.
     Используется в GET-запросах.
     """
     id: Annotated[int, Field(description="Уникальный идентификатор отзыва")]
