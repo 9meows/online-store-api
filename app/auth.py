@@ -1,14 +1,13 @@
 import jwt
 from sqlalchemy import select
 from passlib.context import CryptContext
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.users import User as UserModel
 from app.db_depends import get_async_db
-
 from app.config import settings
 
 # Создаём контекст для хеширования с использованием bcrypt
@@ -88,7 +87,7 @@ async def get_current_seller(current_user: UserModel = Depends(get_current_user)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only sellers can perform this action")
     return current_user
 
-async def get_current_buyer(current_user: UserModel = Depends(get_current_user)):
+async def get_current_buyer(current_user: UserModel = Depends(get_current_user)) -> UserModel:
     """
     Проверяет, что пользователь имеет роль 'buyer'.
     """
@@ -96,7 +95,7 @@ async def get_current_buyer(current_user: UserModel = Depends(get_current_user))
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only buyers can perform this action")
     return current_user
 
-async def get_current_admin(current_user: UserModel = Depends(get_current_user)):
+async def get_current_admin(current_user: UserModel = Depends(get_current_user)) -> UserModel:
     """
     Проверяет, что пользователь имеет роль 'admin'.
     """

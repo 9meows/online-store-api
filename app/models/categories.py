@@ -1,7 +1,8 @@
-from sqlalchemy import String, ForeignKey, Boolean
-from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.orm import relationship
 from typing import TYPE_CHECKING, Optional
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, ForeignKey, Boolean
+
 from app.database import Base
 
 if TYPE_CHECKING:

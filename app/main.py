@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-
 from .routers import categories, products, users, reviews
 
 
@@ -11,7 +10,7 @@ app.include_router(users.router)
 app.include_router(reviews.router)
 
 @app.get("/")
-async def root():
+async def root() -> dict:
     """
     Корневой маршрут, подтверждающий, что API работает.
     """

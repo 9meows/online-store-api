@@ -1,15 +1,17 @@
 import jwt
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, status
+
 from app.config import settings
 from app.auth import oauth2_scheme
 from app.db_depends import get_async_db
 from app.models.users import User as UserModel
-from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas import UserCreate, User as UserSchema
-from fastapi.security import OAuth2PasswordRequestForm
-from fastapi import APIRouter, Depends, HTTPException, status
 from app.auth import hash_password, verify_password, create_access_token, create_refresh_token
+
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -39,7 +41,7 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_async_db)
 
 
 @router.post("/refresh-token")
-async def refresh_token(refresh_token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_async_db)):
+async def refresh_token(refresh_token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_async_db)) -> dict:
     """
     Обновляет access_token с помощью refresh_token.
     """
@@ -63,7 +65,7 @@ async def refresh_token(refresh_token: str = Depends(oauth2_scheme), db: AsyncSe
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/token")
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_async_db)):
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_async_db)) -> dict:
     """
     Аутентифицирует пользователя и возвращает access_token и refresh_token.
     """

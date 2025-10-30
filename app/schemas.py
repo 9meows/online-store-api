@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from decimal import Decimal
 from typing import Annotated
 from datetime import datetime
+from pydantic import BaseModel, Field, ConfigDict, EmailStr
 
 class CategoryCreate(BaseModel):
     """

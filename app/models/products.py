@@ -1,7 +1,7 @@
 from decimal import Decimal
-from sqlalchemy import String, Boolean, Integer, Numeric, Float
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, Boolean, Integer, Numeric, Float
 
 from app.database import Base
 
