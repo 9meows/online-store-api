@@ -31,6 +31,7 @@ async def get_reviews_by_id_product(product_id: int, session: AsyncSession = Dep
     stmt = await session.scalars(select(ReviewModel).where(ReviewModel.is_active == True, 
                                                            ReviewModel.product_id == product_id))
     all_reviews_product_id = stmt.all()
+    
     if not all_reviews_product_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reviews not found")
     return all_reviews_product_id
@@ -81,6 +82,7 @@ async def delete_reviews_by_id(review_id: int, session: AsyncSession = Depends(g
     """
     stmt_review_id = await session.scalars(select(ReviewModel).where(ReviewModel.id == review_id, ReviewModel.is_active == True))
     review = stmt_review_id.first()
+
     if review is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")    
     

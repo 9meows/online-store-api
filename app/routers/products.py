@@ -101,11 +101,13 @@ async def update_product(
     category_result = await db.scalars(
         select(CategoryModel).where(CategoryModel.id == product.category_id, CategoryModel.is_active == True)
     )
+    
     if not category_result.first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Category not found or inactive")
     await db.execute(
         update(ProductModel).where(ProductModel.id == product_id).values(**product.model_dump())
     )
+
     await db.commit()
     await db.refresh(db_product)  # Для консистентности данных
     return db_product
@@ -124,10 +126,12 @@ async def delete_product(
         select(ProductModel).where(ProductModel.id == product_id, ProductModel.is_active == True)
     )
     product = result.first()
+
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found or inactive")
     if product.seller_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only delete your own products")
+    
     await db.execute(
         update(ProductModel).where(ProductModel.id == product_id).values(is_active=False)
     )
