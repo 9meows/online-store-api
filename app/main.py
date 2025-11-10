@@ -1,8 +1,11 @@
 from fastapi import FastAPI
 from .routers import categories, products, users, reviews
+from .log import log_middleware
 
 
 app = FastAPI(title="Интернет-магазин", version="0.1.0")
+
+app.middleware("http")(log_middleware)
 
 app.include_router(categories.router)
 app.include_router(products.router)
