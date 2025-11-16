@@ -1,12 +1,13 @@
-from sqlalchemy import select, update
+from typing import Annotated
+from sqlalchemy import select, update, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 
 from app.auth import get_current_seller
 from app.db_depends import get_async_db
-from app.schemas import Product, ProductCreate
 from app.models.users import User as UserModel
 from app.models.products import Product as ProductModel
+from app.schemas import Product, ProductCreate, ProductList
 from app.models.categories import Category as CategoryModel
 
 
@@ -17,14 +18,68 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[Product], status_code=status.HTTP_200_OK)
-async def get_all_products(session: AsyncSession = Depends(get_async_db)):
+@router.get("/", response_model=ProductList, status_code=status.HTTP_200_OK)
+async def get_all_products(page: int = Query(1, ge=1, le=30),
+                            page_size: int = Query(20, ge=1, le=100),
+                            category_id: int | None = Query(None, description="ID категории для фильтрации"),
+                            search: str | None = Query(None, min_length=1, description="Поиск по названию товара"),
+                            min_price: float | None = Query(None, ge=0, description="Минимальная цена товара"),
+                            max_price: float | None = Query(None, ge=0, description="Максимальная цена товара"),
+                            in_stock: bool | None = Query(None, description="true — только товары в наличии, false — только без остатка"),
+                            seller_id: int | None = Query(None, description="ID продавца для фильтрации"),
+                           session: AsyncSession = Depends(get_async_db)):
     """
-    Возвращает список всех товаров.
+    Возвращает список всех активных товаров с поддержкой фильтров.
     """
-    list_of_products = await session.scalars(select(ProductModel).where(ProductModel.is_active == True))
-    return list_of_products.all()
+    if min_price is not None and max_price is not None and min_price > max_price:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="min_price не может быть больше max_price")
+    
+    filters = [ProductModel.is_active == True]
 
+    if category_id is not None:
+        filters.append(ProductModel.category_id == category_id)
+    if min_price is not None:
+        filters.append(ProductModel.price >= min_price)
+    if max_price is not None:
+        filters.append(ProductModel.price <= max_price)
+    if in_stock is not None:
+        filters.append(ProductModel.stock >= 0 if in_stock else ProductModel.stock == 0)
+    if seller_id is not None:
+        filters.append(ProductModel.seller_id == seller_id)
+
+
+    total_stmt = select(func.count()).select_from(ProductModel).where(*filters)
+
+    rank_col = None
+    if search:
+        search_value = search.strip().lower()
+        if search_value:
+            ts_query = func.websearch_to_tsquery('english', search_value)
+            filters.append(ProductModel.tsv.op('@@')(ts_query))
+            rank_col = func.ts_rank_cd(ProductModel.tsv, ts_query).label('rank')
+            total_stmt = select(func.count()).select_from(ProductModel).where(*filters)
+
+    total = await session.scalar(total_stmt) or 0
+
+    if rank_col is not None:
+        product_stmt = (select(ProductModel, rank_col).
+                        where(*filters).
+                        order_by(desc(rank_col), ProductModel.id)).offset((page - 1)*page_size).limit(page_size)
+        result = await session.execute(product_stmt)
+        rows = result.all()
+        items = [row[0] for row in rows]
+    else:
+        products_stmt = (
+            select(ProductModel)
+            .where(*filters)
+            .order_by(ProductModel.id)
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        items = (await session.scalars(products_stmt)).all()
+
+    response = ProductList(page=page, page_items=items, total_items=total, page_size=page_size)
+    return response
 
 @router.post("/", response_model=Product, status_code=status.HTTP_201_CREATED)
 async def create_product(

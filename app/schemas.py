@@ -100,3 +100,85 @@ class Review(BaseModel):
     comment_date: Annotated[datetime, Field(description="Дата комментария")]
     grade: Annotated[int, Field(description="Оценка пользователя", ge=1, le=5)]
     is_active: Annotated[bool, Field(description="Активность отзыва")]
+
+
+class ProductList(BaseModel):
+    """
+    Модель пагинации для товаров 
+    """
+    page: Annotated[int, Field(ge=1, description="Номер текущей страницы")]
+    page_items: Annotated[list[Product], Field(description="Товары для текущей страницы")]
+    total_items:Annotated[int, Field(ge=0, description="Общее количество товаров")]
+    page_size: Annotated[int, Field(ge=1, description="Количество товаров на одной странице")]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CartItemBase(BaseModel):
+    product_id: Annotated[int, Field(description="ID товара")]
+    quantity: Annotated[int, Field(ge=1, description="Количество товара")]
+
+class CartItemCreate(CartItemBase):
+    """Модель для добавления нового товара в корзину."""
+    pass
+
+class CartItemUpdate(BaseModel):
+    """Модель для обновления количества товара в корзине."""
+    quantity: int = Field(ge=1, description="Новое количество товара")    
+
+class CartItem(BaseModel):
+    """Товар в корзине с данными продукта."""
+    id: Annotated[int, Field(description="ID позиции корзины")]
+    quantity: Annotated[int, Field(ge=1, description="Количество товара")]
+    product: Annotated[Product, Field(description="Характеристики товара")]
+
+    model_config = ConfigDict(from_attributes=True)
+
+class Cart(BaseModel):
+    """Полная информация о корзине пользователя."""
+    user_id: Annotated[int, Field(description="ID пользователя")]
+    items: Annotated[list[CartItem], Field(default_factory=list, description="Корзина пользователя")]
+    total_quantity: Annotated[int, Field(ge=0, description="Общее количество товаров")]
+    total_price: Annotated[Decimal, Field(ge=0, description="Общая сумма товаров")]
+
+    model_config = ConfigDict(from_attributes=True)
+
+class OrderItem(BaseModel):
+    """
+    Модель описывает одну строку заказа.
+    Используется в ответах API.
+    """
+    id: Annotated[int, Field(description="ID позиции заказа")]
+    product_id: Annotated[int, Field(description="ID товара")]
+    quantity: Annotated[int, Field(ge=1, description="Количество")]
+    unit_price: Annotated[Decimal, Field(ge=0, description="Цена за единицу на момент покупки")]
+    total_price: Annotated[Decimal, Field(ge=0, description="Сумма по позиции")]
+    product: Annotated[Product | None, Field(default=None, description="Полная информация о товаре")]
+
+    model_config = ConfigDict(from_attributes=True)
+
+class Order(BaseModel):
+    """
+    Модель даёт полное представление о заказе.
+    Используется в ответах API.
+    """
+    id: Annotated[int, Field(description="ID заказа")]
+    user_id: Annotated[int, Field(description="ID пользователя")]
+    status: Annotated[str, Field(description="Текущий статус заказа")]
+    total_amount: Annotated[Decimal, Field(ge=0, description="Общая стоимость")]
+    created_at: Annotated[datetime, Field(description="Когда заказ был создан")]
+    updated_at: Annotated[datetime, Field(description="Когда последний раз обновлялся")]
+    items: Annotated[list[OrderItem], Field(default_factory=list, description="Список позиций")]
+
+    model_config = ConfigDict(from_attributes=True)
+
+class OrderList(BaseModel):
+    """
+    Модель обёртка для пагинированных списков заказов.
+    """
+    items: Annotated[list[Order], Field(description="Заказы на текущей странице")]
+    total: Annotated[int, Field(ge=0, description="Общее количество заказов")]
+    page: Annotated[int, Field(ge=1, description="Текущая страница")]
+    page_size: Annotated[int, Field(ge=1, description="Размер страницы")]
+
+    model_config = ConfigDict(from_attributes=True)
