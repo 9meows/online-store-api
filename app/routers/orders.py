@@ -1,17 +1,18 @@
 from decimal import Decimal
-
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import selectinload
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from log import logger
 from app.auth import get_current_buyer
 from app.db_depends import get_async_db
+from app.models.users import User as UserModel
+from app.payments import create_yookassa_payment
+from app.models.products import Product as ProductModel
 from app.models.cart_items import CartItem as CartItemModel
 from app.models.orders import Order as OrderModel, OrderItem as OrderItemModel
-from app.models.users import User as UserModel
-from app.schemas import Order as OrderSchema, OrderList
-from app.models.products import Product as ProductModel
+from app.schemas import Order as OrderSchema, OrderList, OrderCheckoutResponse
 
 router = APIRouter(
     prefix="/orders",
@@ -67,8 +68,20 @@ async def checkout_order(user_current: UserModel = Depends(get_current_buyer), s
 
     order.total_amount = total_amount
     session.add(order)
-
-    await session.flush()  
+    try:
+        await session.flush()
+        payment_info = await create_yookassa_payment(order_id=order.id, amount=order.total_amount,
+                                                    user_email=user_current.email, description=f"Оплата заказа #{order.id}")
+    except RuntimeError as exc:
+        await session.rollback()
+        logger.exception(f"RuntimeError during checkout: {exc}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    except Exception as exc:
+        await session.rollback()
+        logger.exception(f"Unexpected error during checkout: {exc}") 
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+    
+    order.payment_id = payment_info.get("id")
     created_order = await _load_order_with_items(session, order.id, user_current.id)
     if not created_order:
         raise HTTPException(
@@ -77,7 +90,8 @@ async def checkout_order(user_current: UserModel = Depends(get_current_buyer), s
     )
     await session.execute(delete(CartItemModel).where(CartItemModel.user_id == user_current.id))
     await session.commit()
-    return created_order
+
+    return OrderCheckoutResponse(order=created_order, confirmation_url=payment_info.get("confirmation_url"))
 
 @router.get("/", response_model=OrderList, status_code=status.HTTP_200_OK)
 async def get_all_orders(page: int = Query(1, ge=1), page_size: int = Query(10, ge=1, le=100),
@@ -99,3 +113,24 @@ async def get_order_by_id(order_id:int, current_user: UserModel = Depends(get_cu
     if order is None or current_user.id != order.user_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     return order
+
+@router.get("/{order_id}/status", response_model=..., status_code=status.HTTP_200_OK)
+async def get_order_status(order_id: int, current_user: UserModel = Depends(get_current_buyer),
+                            sesion:AsyncSession = Depends(get_async_db)):
+    
+    query_check_order = await sesion.scalars(select(OrderModel).where(OrderModel.id == order_id,
+                                                                      OrderModel.user_id == current_user.id))
+    order = query_check_order.first()
+    if order is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    
+    message = ""
+    if order.status == "paid":
+        message = f"Спасибо! Заказ #{order_id} оплачен. Ожидайте доставку."
+    elif order.status == "canceled":
+        message = f"Оплата не прошла. Попробуйте ещё раз."
+    elif order.status == "pending":
+        message = f"Оплата в процессе..."
+
+    return {"order_id": order_id, "status": order.status, 
+            "paid_at": order.paid_at, "message": message}

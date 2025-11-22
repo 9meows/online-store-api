@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     EMAIL_ADMIN: str
     PASSWORD_ADMIN: str
+    YOOKASSA_SHOP_ID: int
+    YOOKASSA_SECRET_KEY: str
+    YOOKASSA_RETURN_URL: str = "http://localhost:8000/"
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from .routers import categories, products, users, reviews, cart, orders
+from .routers import categories, products, users, reviews, cart, orders, payments
 from .log import log_middleware
 
 
@@ -16,6 +16,7 @@ app.include_router(products.router)
 app.include_router(users.router)
 app.include_router(reviews.router)
 app.include_router(orders.router)
+app.include_router(payments.router)
 
 @app.get("/")
 async def root() -> dict:

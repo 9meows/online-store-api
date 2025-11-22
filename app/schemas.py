@@ -198,3 +198,10 @@ class OrderList(BaseModel):
     page_size: Annotated[int, Field(ge=1, description="Размер страницы")]
 
     model_config = ConfigDict(from_attributes=True)
+
+class OrderCheckoutResponse(BaseModel):
+    """
+    Модель для отправки данных клиенту от YooKassa
+    """
+    order: Annotated[Order, Field(description="Созданный заказ")]
+    confirmation_url: Annotated[str | None, Field(default=None, description="URL для перехода на оплату в YooKassa")]
