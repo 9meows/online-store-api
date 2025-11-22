@@ -114,7 +114,7 @@ async def get_order_by_id(order_id:int, current_user: UserModel = Depends(get_cu
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
     return order
 
-@router.get("/{order_id}/status", response_model=..., status_code=status.HTTP_200_OK)
+@router.get("/{order_id}/status", status_code=status.HTTP_200_OK)
 async def get_order_status(order_id: int, current_user: UserModel = Depends(get_current_buyer),
                             sesion:AsyncSession = Depends(get_async_db)):
     
