@@ -9,6 +9,7 @@ from app.config import settings
 from app.auth import oauth2_scheme
 from app.db_depends import get_async_db
 from app.models.users import User as UserModel
+from app.tasks.email_tasks import send_email_task
 from app.schemas import UserCreate, User as UserSchema
 from app.auth import hash_password, verify_password, create_access_token, create_refresh_token
 
@@ -37,6 +38,13 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_async_db)
     # Добавление в сессию и сохранение в базе
     db.add(db_user)
     await db.commit()
+
+    send_email_task.delay(
+        to=user.email,
+        subject="Добро пожаловать",
+        body="Ваш аккаунт создан"
+    )
+
     return db_user
 
 

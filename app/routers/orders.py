@@ -4,7 +4,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from log import logger
+from ..log import logger
 from app.auth import get_current_buyer
 from app.db_depends import get_async_db
 from app.models.users import User as UserModel
