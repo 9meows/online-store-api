@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from .celery_app import celery_app
-from .routers import categories, products, users, reviews, cart, orders, payments
+
 from app.log import log_middleware
+from app.routers import categories, products, users, reviews, cart, orders, payments
+from app.celery_app import celery_app
 
 app = FastAPI(title="Интернет-магазин", version="0.1.0")
 

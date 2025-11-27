@@ -1,12 +1,19 @@
 from celery import Celery
-
-REDIS_HOST = 'redis://127.0.0.1:6379/0'
+from app.config import settings
 
 celery_app = Celery(
     "online_store",
-    broker=REDIS_HOST,
-    backend=REDIS_HOST,
+    broker=settings.CELERY_BROKER_URL,
+    backend=settings.CELERY_RESULT_BACKEND,
     broker_connection_retry_on_startup=True
 )
+celery_app.conf.update(
+    task_serializer='json',
+    accept_content=['json'],
+    result_serializer='json',
+    timezone='UTC',
+    enable_utc=True,
+)
+
 
 import app.tasks.email_tasks

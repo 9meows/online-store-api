@@ -1,17 +1,22 @@
 import aiosmtplib
 from email.message import EmailMessage
+from app.config import settings
 
 async def send_email_async(recipient: str, subject: str, body: str):
-    sender = "admin@email.com"
+    """
+    Отправляет email асинхронно через SMTP.
+    """
     message = EmailMessage()
-    message["From"] = sender
+    message["From"] = settings.SMTP_FROM
     message["To"] = recipient
     message["Subject"] = subject
     message.set_content(body)
 
-    await aiosmtplib.send(message,
-        hostname="localhost",
-        recipients=[recipient],
-        sender=sender,
-        port=1025,
+    await aiosmtplib.send(
+        message,
+        hostname=settings.SMTP_HOST,
+        port=settings.SMTP_PORT,
+        username=settings.SMTP_USER,
+        password=settings.SMTP_PASSWORD,
+        start_tls=True
     )
