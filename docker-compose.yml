@@ -1,19 +1,109 @@
+version: '3.8'
+
 services:
-
-  redis:
-    image: redis
-    container_name: redis
+  # Бд PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: online_store_db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-online_store}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
-      - "6379:6379" 
-    restart: unless-stopped
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_network
 
+  # Redis для Celery
+  redis:
+    image: redis:7-alpine
+    container_name: online_store_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_network
+
+  # MailDev для тестирования email
   maildev:
     image: maildev/maildev
-    container_name: maildev
-    environment:
-      MAILDEV_WEB_PORT: 1080 
-      MAILDEV_SMTP_PORT: 1025 
+    container_name: online_store_maildev
     ports:
-      - "8080:1080" 
-      - "1025:1025"
+      - "8080:1080"  # Web UI
+      - "1025:1025"  # SMTP
+    networks:
+      - app_network
+
+  # FastAPI приложение
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: online_store_api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DB_HOST: postgres
+      SMTP_HOST: maildev
+      SMTP_PORT: 1025
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app             
+      - ./media:/app/media          # Медиа файлы
+      - ./alembic.ini:/app/alembic.ini
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app_network
     restart: unless-stopped
+
+  # Celery Worker
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: online_store_celery_worker
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=2
+    environment:
+        DB_HOST: postgres
+        SMTP_HOST: maildev
+        SMTP_PORT: 1025
+    volumes:
+      - ./app:/app/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - postgres
+      - maildev
+    networks:
+      - app_network
+    restart: unless-stopped
+
+# Volumes для постоянного хранения
+volumes:
+  postgres_data:
+  redis_data:
+
+# Сеть для взаимодействия контейнеров
+networks:
+  app_network:
+    driver: bridge

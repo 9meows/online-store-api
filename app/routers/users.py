@@ -41,8 +41,8 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_async_db)
 
     send_email_task.delay(
         to=user.email,
-        subject="Добро пожаловать",
-        body="Ваш аккаунт создан"
+        subject="Welcome",
+        body="Your account was created"
     )
 
     return db_user
